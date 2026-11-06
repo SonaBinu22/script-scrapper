@@ -38,7 +38,12 @@ Write-Host "Timestamp: $timestamp"
 Write-Host "Destination: $targetBackupDir"
 
 # Ensure directories exist
-New-Item -ItemType Directory -Path $targetBackupDir -Force | Out-Null
+$targetDirItem = New-Item -ItemType Directory -Path $targetBackupDir -Force
+$targetBackupDir = $targetDirItem.FullName
+$dbDumpFile = Join-Path $targetBackupDir "database.dump"
+$storageBackupDir = Join-Path $targetBackupDir "storage"
+$checksumFile = Join-Path $targetBackupDir "checksums.sha256"
+$metaFile = Join-Path $targetBackupDir "backup_meta.json"
 New-Item -ItemType Directory -Path $storageBackupDir -Force | Out-Null
 if (-not (Test-Path $StorageDir)) {
     New-Item -ItemType Directory -Path $StorageDir -Force | Out-Null
