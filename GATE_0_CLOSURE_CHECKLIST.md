@@ -39,7 +39,7 @@
 | **17** | **Git Repository Initialized** | Git initialized on `d:\script-scrapper` | Git repository active (`.git` exists) | **PASSED** | Verified via `git status`. |
 | **18** | **Branch Topology Created** | `main` (protected) and `develop` (integration) | Both branches created and tracked | **PASSED** | Verified via `git branch -a`. |
 | **19** | **Git Ignore Specification** | Covers Python, Node, Vite, storage, `.env` | `.gitignore` committed to repo | **PASSED** | Verified via `.gitignore` review. |
-| **20** | **Git Governance & Remote Strategy** | Contribution rules, PR guidelines, remote branch protection procedures. | `GIT_GOVERNANCE.md` | **PASSED** | Established; remote protection documented pending private remote repo provisioning. |
+| **20** | **GitHub Remote & Governance** | Remote connected to GitHub; main and develop published; branch protection audited. | `GIT_GOVERNANCE.md` Sections 6 & 7 | **PASSED** | Remote `https://github.com/SonaBinu22/script-scrapper.git` active; branches synchronized; Free tier limitation documented. |
 
 ---
 

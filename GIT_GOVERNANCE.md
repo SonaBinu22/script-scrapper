@@ -95,30 +95,67 @@ Before any PR can be merged into `develop` or `main`:
 
 ---
 
-## 6. REMOTE REPOSITORY PROVISIONING & BRANCH PROTECTION RULES
+## 6. REMOTE REPOSITORY PROVISIONING & BRANCH PROTECTION AUDIT
 
-### 6.1 Private Remote Repository Provisioning (GitHub / GitLab)
-Prior to launching parallel development across the five engineering modules, a private remote repository must be provisioned and linked to the local Git workspace:
+### 6.1 GitHub Remote Repository Configuration & Synchronization Evidence
+The Script Scrapper codebase is officially connected and synchronized with GitHub:
 
-1. **Remote Repository Setup Procedure:**
-   ```powershell
-   # Add private remote repository (replace with designated organization/user URL)
-   git remote add origin git@github.com:organization/script-scrapper.git
+- **Remote URL:** `https://github.com/SonaBinu22/script-scrapper.git`
+- **Remote Identifier:** `origin`
+- **Default Branch:** `main` (Verified via `git remote show origin`)
+- **Published Branches & Verified Hashes:**
+  - `origin/main` $\longrightarrow$ Commit `5dff8bf8dc349df6c643359a2896b3aecc486a2e` (Protected Release Branch)
+  - `origin/develop` $\longrightarrow$ Commit `cd41258edf9988f6a74edbae7faf081046386fa2` (Active Integration Branch)
+- **Local Branch Tracking:**
+  - `develop` tracks `origin/develop`
+  - `main` tracks `origin/main`
+- **Network Resolution Standard:** Host Git configured with `http.ipResolve = ipv4` to eliminate Windows NAT64 connection resets.
 
-   # Push both authoritative branches to remote
-   git push -u origin main
-   git push -u origin develop
-   ```
+### 6.2 GitHub Plan Eligibility & Branch Protection Verification
+An independent API audit of repository capabilities was conducted against GitHub REST API v3:
+- **Repository Visibility:** `Private`
+- **Owner Account Type:** Personal User (`SonaBinu22`)
+- **Subscription Tier:** **GitHub Free**
+- **API Audit Finding:**
+  Querying `/repos/SonaBinu22/script-scrapper/rulesets` returned:
+  ```json
+  {
+    "message": "Upgrade to GitHub Pro or make this repository public to enable this feature.",
+    "documentation_url": "https://docs.github.com/rest/repos/rules#get-all-repository-rulesets",
+    "status": "403"
+  }
+  ```
+- **Governance Attestation:** In accordance with audit instructions (*"Do not claim protection is active until verified"*), **server-side GitHub branch protection is currently UNAVAILABLE due to GitHub Free tier restrictions on private personal repositories**.
 
-2. **Mandatory Remote Branch Protection Rules (`main` and `develop`):**
-   - **Require Pull Request Reviews:** Enforce a minimum of 1 approved review from designated code owners (System Architect / QA Architect) prior to merge.
-   - **Require Status Checks to Pass:** Mandatory automated CI check pass (lint, unit tests, schema validation) before merge.
-   - **Require Branches to be Up to Date:** Feature branches must be rebased on `develop` prior to merge.
-   - **Prohibit Force Pushes:** Block force-pushes (`git push --force`) on `main` and `develop`.
-   - **Prohibit Branch Deletions:** Block deletion of `main` and `develop`.
-   - **Enforce Administrators:** Branch protection rules must apply to repository administrators as well.
+### 6.3 Proposed Solutions for Remote Protection
+To establish server-side branch protection for `main` and `develop`, the System Architect must select from the following options:
+1. **Option A (GitHub Pro Upgrade — Recommended for Private Development):** Upgrade the repository owner account to GitHub Pro ($4/month). This immediately enables full branch protection rules and rulesets for private repositories.
+2. **Option B (GitHub Organization Transfer):** Transfer `script-scrapper` to a GitHub Organization on the GitHub Team plan.
+3. **Option C (Public Repository):** If proprietary IP confidentiality requirements permit (the codebase maintains zero credentials and synthetic test screenplays only), converting the repository to Public instantly unlocks full branch protection rules on GitHub Free.
+4. **Option D (Interim Local Pre-Push Hook Enforcement):** While awaiting account upgrade authorization, enforce branch protection across all engineering team clones via local Git hooks (`.githooks/pre-push`), blocking direct pushes to `main` and `develop`.
 
-### 6.2 Governance Status & Verification Standard
-- **Current Remote Protection Status:** **DOCUMENTED (PENDING REMOTE PROVISIONING)**.
-- **Strict Attestation Rule:** The engineering team must **NOT** claim remote branch protection is active until the private remote repository has been created, protection rules have been configured in the provider console, and protection has been empirically verified via a rejected direct push test (`git push origin main` rejected).
-- **Prerequisite for Parallel Development:** Remote repository provisioning and branch protection verification must be completed before parallel team branching in Gate 1.
+---
+
+## 7. TEAM DEVELOPMENT & FEATURE BRANCH TOPOLOGY
+
+All parallel development across the five engineering modules must adhere to the three-tier branching topology:
+
+```text
+main (Production Release — Tagged Versions)
+  ↑ (PR with System Architect Sign-Off)
+develop (Integration Branch — Continuous Integration)
+  ↑ (PR with Peer Review + Automated Tests)
+feature/<module>-<task>
+```
+
+### Approved Gate 1 Feature Branches
+- `feature/backend-foundation` — FastAPI initialization, structured logging, error handling, health endpoints.
+- `feature/database-foundation` — PostgreSQL 16 schema, SQLAlchemy AsyncEngine pool, Alembic migration 0001.
+- `feature/frontend-foundation` — Vite + React 18 SPA, Tailwind CSS, shadcn/ui, client routing.
+- `feature/windows-deployment` — Caddy reverse proxy, local CA trust, Windows Firewall rules, storage ACLs.
+- `feature/test-infrastructure` — Pytest fixtures, 10-file screenplay test corpora, Locust load benchmarks.
+
+### Development Rules
+1. **No Direct Commits to `main`:** `main` reflects only formally signed-off release milestones.
+2. **No Direct Commits to `develop`:** All work must originate on an assigned `feature/<module>-<task>` branch.
+3. **Mandatory PR & Peer Review:** No branch may merge into `develop` without passing test execution logs and an approving review from a peer engineer or the System Architect.

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Script Scrapper - Pre-Push Governance Hook
+# Prohibits direct pushes to main and develop without PR review
+
+protected_branches="main develop"
+
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+while read local_ref local_sha remote_ref remote_sha
+do
+    for branch in $protected_branches
+    do
+        if [ "$remote_ref" = "refs/heads/$branch" ]; then
+            # Check if this is an authorized governance release commit or reject
+            echo "[GOVERNANCE ERROR] Direct push to protected branch '$branch' is strictly prohibited."
+            echo "All changes must be submitted via Pull Request to 'develop' from an assigned feature branch."
+            echo "Workflow: feature/<module>-<task> -> develop -> main"
+            exit 1
+        fi
+    done
+done
+
+exit 0

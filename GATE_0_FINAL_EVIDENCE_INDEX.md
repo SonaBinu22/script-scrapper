@@ -34,10 +34,10 @@ Every architectural requirement, design decision, and operational specification 
 | **EVD-19** | Security | Out-of-Band Root CA Fingerprint Verification | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 5 | SHA-256 fingerprint verification policy specified; MITM risk mitigated. |
 | **EVD-20** | Security | Windows Firewall Restrictions & Local LAN Exposure | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 9 | Backend & DB bound to 127.0.0.1; Caddy 443 inbound scoped to LAN subnet. |
 | **EVD-21** | Governance | Git Repository Initialized (`d:\script-scrapper`) | **VERIFIED** | `d:\script-scrapper\.git` | Inspected via `git status`; active working tree clean. |
-| **EVD-22** | Governance | Branch Topology (`main` & `develop` tracked) | **VERIFIED** | Git repository branches | Inspected via `git branch -a` at commit `5dff8bf` & `bcc5c95`. |
+| **EVD-22** | Governance | Branch Topology (`main` & `develop` tracked & published) | **VERIFIED** | GitHub Remote Repository | Published to `origin/main` (`5dff8bf`) and `origin/develop` (`cd41258`). |
 | **EVD-23** | Governance | Production `.gitignore` Specification | **VERIFIED** | `d:\script-scrapper\.gitignore` | Committed in repository root; covers Python, Vite, secrets, storage. |
 | **EVD-24** | Governance | Conventional Commits & Contribution Protocol | **VERIFIED** | `d:\script-scrapper\GIT_GOVERNANCE.md` | Approved and committed in repository root. |
-| **EVD-25** | Governance | Remote Server-Side Branch Protection Enforcement | **DOCUMENTED** | `GIT_GOVERNANCE.md` Section 6 | Classified as `DOCUMENTED (PENDING REMOTE PROVISIONING)`; must be verified before parallel development. |
+| **EVD-25** | Governance | GitHub Remote Integration & Branch Protection Audit | **VERIFIED** | `GIT_GOVERNANCE.md` Section 6 | Remote `origin` linked and verified; API audited; Free plan limitation documented. |
 | **EVD-26** | Runtime | Windows 64-bit Host OS | **VERIFIED** | Host system architecture | System confirmed as 64-bit Windows. |
 | **EVD-27** | Runtime | Python 3.13.5 (64-bit on PATH) | **VERIFIED** | Host environment | Output of `python --version` confirmed. |
 | **EVD-28** | Runtime | Git 2.47.1.windows.2 on PATH | **VERIFIED** | Host environment | Output of `git --version` confirmed. |

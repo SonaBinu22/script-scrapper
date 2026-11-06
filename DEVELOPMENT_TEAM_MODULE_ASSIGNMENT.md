@@ -40,6 +40,7 @@ To ensure rigorous accountability, zero overlapping ambiguity, and strict owners
 
 ### Member 2: Senior Backend Engineer
 - **Direct Responsibility:** Database Layer, Core Backend Application & Task Queue Engine.
+- **Assigned Feature Branches:** `feature/database-foundation` (Module 2), `feature/backend-foundation` (Module 3).
 - **Assigned Modules:** Module 2 (Database Foundation), Module 3 (Backend Foundation).
 - **Specific Deliverables:**
   - `backend/app/core/config.py`: Pydantic Settings configuration loader.
@@ -53,6 +54,7 @@ To ensure rigorous accountability, zero overlapping ambiguity, and strict owners
 
 ### Member 3: Senior Frontend Engineer
 - **Direct Responsibility:** User Interface Client, Design System & Client State.
+- **Assigned Feature Branch:** `feature/frontend-foundation` (Module 4).
 - **Assigned Modules:** Module 4 (Frontend Foundation).
 - **Specific Deliverables:**
   - `frontend/`: Clean Vite + React 18+ TypeScript application skeleton.
@@ -67,6 +69,7 @@ To ensure rigorous accountability, zero overlapping ambiguity, and strict owners
 
 ### Member 4: DevOps & Windows Platform Engineer
 - **Direct Responsibility:** Host Ingress, Windows Service Architecture, Security & Disaster Recovery.
+- **Assigned Feature Branch:** `feature/windows-deployment` (Module 5).
 - **Assigned Modules:** Module 5 (Windows Deployment Foundation), Operational Scripting.
 - **Specific Deliverables:**
   - `Caddyfile`: Reverse proxy, internal CA, static file routing (`try_files`), and `/system/ca.crt` endpoint.
@@ -80,6 +83,7 @@ To ensure rigorous accountability, zero overlapping ambiguity, and strict owners
 
 ### Member 5: QA & Test Architect
 - **Direct Responsibility:** Test Frameworks, Screenplay Test Corpora & Independent Evidence Audit.
+- **Assigned Feature Branch:** `feature/test-infrastructure` (QA Test Corpora & Benchmarks).
 - **Assigned Modules:** Test Infrastructure & Verification.
 - **Specific Deliverables:**
   - `tests/`: Pytest configuration (`pytest.ini`), database test fixtures with transactional rollback.

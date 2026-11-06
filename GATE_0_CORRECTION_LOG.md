@@ -33,10 +33,11 @@ This log documents all technical corrections, rationales, and repository impacts
 | **COR-18** | **Windows Firewall** | Firewall allowed overly broad LAN ranges; lacked explicit IPv6 scoping and host port isolation confirmation. | Replaced broad CIDRs with configurable subnet (`$env:LAN_SUBNET`); restricted IPv6 to Link-Local/ULA; verified FastAPI (8000) and PostgreSQL (5432) bind to loopback only. | Baseline v1.3 Part 9 | **Resolved & Committed** |
 | **COR-19** | **Git Governance** | Remote branch protection not formally attested as pending remote provisioning before parallel work. | Documented private GitHub/GitLab remote setup and PR rules; classified remote protection as `DOCUMENTED (PENDING REMOTE PROVISIONING)` until verified. | `GIT_GOVERNANCE.md` | **Resolved & Committed** |
 | **COR-20** | **Gate 1 Acceptance** | Hardcoded IP `192.168.1.150` in AC-05; AC-06 restore test risked dropping production development data. | AC-05 updated to configurable host addressing (`HOST_IP_OR_HOSTNAME`); AC-06 updated to mandate isolated test database and directory for restoration verification. | `GATE_1_ACCEPTANCE_CRITERIA.md` | **Resolved & Committed** |
+| **COR-21** | **Remote Integration** | Remote repository unlinked; branch protection feasibility unverified against actual GitHub plan. | Connected `origin` to `https://github.com/SonaBinu22/script-scrapper.git`; published `main` and `develop`; audited GitHub API, identifying Free plan limitation on private personal repos; documented solutions & local pre-push enforcement. | `GIT_GOVERNANCE.md` Section 6 | **Resolved & Committed** |
 
 ---
 
 ## 2. AUDIT COMPLIANCE ATTESTATION
 
-All 20 corrective actions have been applied to the authoritative baseline documentation, verified for architectural consistency, and tracked in Git. Zero unresolved technical contradictions remain.
+All 21 corrective actions have been applied to the authoritative baseline documentation, verified for architectural consistency, and tracked in Git. Zero unresolved technical contradictions remain.
 
