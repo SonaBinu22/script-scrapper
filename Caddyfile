@@ -6,12 +6,13 @@
 	skip_install_trust
 }
 
-https://localhost, https://127.0.0.1 {
+https://localhost, https://127.0.0.1, https://10.88.206.166 {
 	tls internal
 
-	# Reverse proxy backend API endpoints
+	# Reverse proxy backend API endpoints (Load balanced across 2 Uvicorn workers)
 	handle /api/* {
-		reverse_proxy 127.0.0.1:8000 {
+		reverse_proxy 127.0.0.1:8000 127.0.0.1:8001 {
+			lb_policy round_robin
 			header_up Host {host}
 			header_up X-Real-IP {remote_host}
 		}
