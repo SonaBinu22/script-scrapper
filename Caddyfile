@@ -1,0 +1,36 @@
+{
+	storage file_system {
+		root D:/script-scrapper/caddy_data
+	}
+	auto_https disable_redirects
+	skip_install_trust
+}
+
+https://localhost, https://127.0.0.1, https://10.88.206.166 {
+	tls internal
+
+	# Reverse proxy backend API endpoints (Load balanced across 2 Uvicorn workers)
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000 127.0.0.1:8001 {
+			lb_policy round_robin
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	# Endpoint to download the Caddy root CA certificate
+	handle /system/ca.crt {
+		root * D:/script-scrapper/caddy_data/pki/authorities/local
+		rewrite * /root.crt
+		header Content-Type application/x-x509-ca-cert
+		header Content-Disposition "attachment; filename=script-scrapper-ca.crt"
+		file_server
+	}
+
+	# Serve static frontend SPA
+	handle {
+		root * D:/script-scrapper/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
