@@ -1,0 +1,141 @@
+# Script Scrapper — Git Ignore Specification
+# Version: 1.0 (Phase 0 Gate Closure)
+
+# ==============================================================================
+# Python & Virtual Environments
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+
+# ==============================================================================
+# Node.js & Frontend (Vite + React)
+# ==============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Vite Build Output
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# Vite / React Caches
+.eslintcache
+.stylelintcache
+.vite/
+.turbo/
+
+# ==============================================================================
+# Local Storage, Screenplays & Database Artifacts
+# ==============================================================================
+# Preserve storage directory structure via .gitkeep, ignore actual user documents
+storage/originals/*
+!storage/originals/.gitkeep
+storage/extracted/*
+!storage/extracted/.gitkeep
+storage/processing/*
+!storage/processing/.gitkeep
+storage/exports/*
+!storage/exports/.gitkeep
+storage/backups/*
+!storage/backups/.gitkeep
+storage/temporary/*
+!storage/temporary/.gitkeep
+storage/emails/*
+!storage/emails/.gitkeep
+
+# Screenplay test corpora raw uploads
+fixtures/screenplays/confidential/*
+!fixtures/screenplays/confidential/.gitkeep
+
+# ==============================================================================
+# Environment Configuration & Secrets
+# ==============================================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+*.ca
+id_rsa
+id_ecdsa
+id_ed25519
+
+# Caddy Local Certificates Cache
+.caddy/
+certificates/
+
+# ==============================================================================
+# Operating System & IDE Files
+# ==============================================================================
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors & IDEs
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
