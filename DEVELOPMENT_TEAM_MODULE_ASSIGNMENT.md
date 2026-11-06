@@ -43,7 +43,7 @@ To ensure rigorous accountability, zero overlapping ambiguity, and strict owners
 - **Assigned Modules:** Module 2 (Database Foundation), Module 3 (Backend Foundation).
 - **Specific Deliverables:**
   - `backend/app/core/config.py`: Pydantic Settings configuration loader.
-  - `backend/app/database/connection.py`: SQLAlchemy AsyncEngine connection pool (`pool_size=30`, `max_overflow=10`).
+  - `backend/app/database/connection.py`: SQLAlchemy AsyncEngine connection pool (`pool_size=15`, `max_overflow=5` per Uvicorn worker process, max 40 API peak).
   - `backend/migrations/versions/0001_initial_schema.py`: Alembic migration establishing all 14 core tables.
   - `backend/app/api/v1/health.py`: Healthcheck (`/health`) and system status (`/system/status`) endpoints.
   - `backend/app/core/exceptions.py`: Global exception handlers and error envelope schemas.
@@ -72,11 +72,11 @@ To ensure rigorous accountability, zero overlapping ambiguity, and strict owners
   - `Caddyfile`: Reverse proxy, internal CA, static file routing (`try_files`), and `/system/ca.crt` endpoint.
   - `scripts/backup.ps1` & `scripts/restore.ps1`: Production coordinated backup and recovery scripts.
   - Windows Service definitions via WinSW or NSSM (`ScriptScrapper-API`, `ScriptScrapper-Proxy`, `ScriptScrapper-Worker`).
-  - Windows Firewall configuration restricting ports 80/443 to the local LAN subnet.
+  - Windows Firewall configuration restricting ports 80/443 strictly to the configurable actual local LAN subnet (`$env:LAN_SUBNET`) and constraining IPv6 to Link-Local / ULA.
   - NTFS permissions hardening on `storage/` and `%LOCALAPPDATA%\Caddy\certificates\local\root.key`.
 - **Dependencies:** Member 2 (Backend executable target), Member 3 (`frontend/dist/` build target).
-- **Acceptance Criteria:** Satisfy AC-05 (Caddy Ingress & CA Trust), AC-06 (Live Coordinated Backup & Restore).
-- **Evidence Requirements:** Browser HTTPS connection logs over LAN IP, SHA-256 fingerprint verification output, successful `scripts/backup.ps1` and `scripts/restore.ps1` execution logs.
+- **Acceptance Criteria:** Satisfy AC-05 (Caddy Ingress & CA Trust over configurable host address), AC-06 (Live Coordinated Backup & Restore in isolated test environment).
+- **Evidence Requirements:** Browser HTTPS connection logs over configurable host address, SHA-256 fingerprint verification output, successful isolated `scripts/backup.ps1` and `scripts/restore.ps1` execution logs.
 
 ### Member 5: QA & Test Architect
 - **Direct Responsibility:** Test Frameworks, Screenplay Test Corpora & Independent Evidence Audit.
@@ -105,3 +105,4 @@ $$\mathbf{PLAN} \longrightarrow \mathbf{IMPLEMENT} \longrightarrow \mathbf{TEST}
 4. **EVIDENCE:** Capture terminal outputs, database query logs, and reproducible verification scripts.
 5. **REVIEW:** Submit Pull Request to `develop` for independent peer review (Jarvis + peer engineer).
 6. **APPROVAL:** System Architect reviews compliance and authorizes merge into `develop`.
+

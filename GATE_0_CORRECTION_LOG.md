@@ -28,9 +28,15 @@ This log documents all technical corrections, rationales, and repository impacts
 | **COR-13** | **CA Security** | Instructed operators to delete CA storage directory as routine recovery; insecure certificate download. | Prohibited CA deletion; mandated restricted NTFS ACLs on `root.key`; mandated out-of-band SHA-256 fingerprint verification. | Baseline v1.3 Part 5, ADR-009 | **Resolved & Committed** |
 | **COR-14** | **CIR Coordinate Space**| Coordinates assumed fixed US Letter points, failing on A4 paper, rotated pages, or non-zero CropBoxes. | Standardized coordinate contract to top-left unrotated origin; defined proportional margin classification for Letter & A4. | Baseline v1.3 Part 6, ADR-007 | **Resolved & Committed** |
 | **COR-15** | **Audit Evidence** | Documentation of procedures (e.g. backup restore, load testing) was previously marked as "VERIFIED". | Reclassified unexecuted implementation-stage tests to `DOCUMENTED` or `NOT TESTED`; assigned live tests to Gate 1/3/7. | `GATE_0_CLOSURE_CHECKLIST.md` | **Resolved & Committed** |
+| **COR-16** | **Connection Pooling** | Uvicorn worker count unspecified; aggregate per-process pool multiplication risked exceeding connection budget. | Mandated 2 Uvicorn workers; each process configured with `pool_size=15`, `max_overflow=5` (20 max per process, 40 peak API). Total across all processes ($40+2+5+3+3+47=100$) confirmed within PostgreSQL ceiling. | Baseline v1.3 Part 3 | **Resolved & Committed** |
+| **COR-17** | **Worker SQL Testing** | Worker CTE SQL needed formal transaction boundary check and execution milestone assignment. | Formally validated CTE syntax; documented strict short-transaction boundaries (<50ms claim, processing outside DB tx, <200ms write); assigned live execution testing to Gate 1. | Baseline v1.3 Part 4 | **Resolved & Committed** |
+| **COR-18** | **Windows Firewall** | Firewall allowed overly broad LAN ranges; lacked explicit IPv6 scoping and host port isolation confirmation. | Replaced broad CIDRs with configurable subnet (`$env:LAN_SUBNET`); restricted IPv6 to Link-Local/ULA; verified FastAPI (8000) and PostgreSQL (5432) bind to loopback only. | Baseline v1.3 Part 9 | **Resolved & Committed** |
+| **COR-19** | **Git Governance** | Remote branch protection not formally attested as pending remote provisioning before parallel work. | Documented private GitHub/GitLab remote setup and PR rules; classified remote protection as `DOCUMENTED (PENDING REMOTE PROVISIONING)` until verified. | `GIT_GOVERNANCE.md` | **Resolved & Committed** |
+| **COR-20** | **Gate 1 Acceptance** | Hardcoded IP `192.168.1.150` in AC-05; AC-06 restore test risked dropping production development data. | AC-05 updated to configurable host addressing (`HOST_IP_OR_HOSTNAME`); AC-06 updated to mandate isolated test database and directory for restoration verification. | `GATE_1_ACCEPTANCE_CRITERIA.md` | **Resolved & Committed** |
 
 ---
 
 ## 2. AUDIT COMPLIANCE ATTESTATION
 
-All 15 corrective actions have been applied to the authoritative baseline documentation, verified for architectural consistency, and tracked in Git. Zero unresolved technical contradictions remain.
+All 20 corrective actions have been applied to the authoritative baseline documentation, verified for architectural consistency, and tracked in Git. Zero unresolved technical contradictions remain.
+

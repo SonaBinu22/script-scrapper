@@ -92,3 +92,33 @@ Before any PR can be merged into `develop` or `main`:
 2. **Automated Verification:** All unit and integration test suites must pass cleanly.
 3. **Peer Review:** Minimum of one thorough code review from a designated senior engineer.
 4. **Evidence Submission:** The PR description must link to the requirement ID, provide terminal output showing passing test commands, and document any database migrations.
+
+---
+
+## 6. REMOTE REPOSITORY PROVISIONING & BRANCH PROTECTION RULES
+
+### 6.1 Private Remote Repository Provisioning (GitHub / GitLab)
+Prior to launching parallel development across the five engineering modules, a private remote repository must be provisioned and linked to the local Git workspace:
+
+1. **Remote Repository Setup Procedure:**
+   ```powershell
+   # Add private remote repository (replace with designated organization/user URL)
+   git remote add origin git@github.com:organization/script-scrapper.git
+
+   # Push both authoritative branches to remote
+   git push -u origin main
+   git push -u origin develop
+   ```
+
+2. **Mandatory Remote Branch Protection Rules (`main` and `develop`):**
+   - **Require Pull Request Reviews:** Enforce a minimum of 1 approved review from designated code owners (System Architect / QA Architect) prior to merge.
+   - **Require Status Checks to Pass:** Mandatory automated CI check pass (lint, unit tests, schema validation) before merge.
+   - **Require Branches to be Up to Date:** Feature branches must be rebased on `develop` prior to merge.
+   - **Prohibit Force Pushes:** Block force-pushes (`git push --force`) on `main` and `develop`.
+   - **Prohibit Branch Deletions:** Block deletion of `main` and `develop`.
+   - **Enforce Administrators:** Branch protection rules must apply to repository administrators as well.
+
+### 6.2 Governance Status & Verification Standard
+- **Current Remote Protection Status:** **DOCUMENTED (PENDING REMOTE PROVISIONING)**.
+- **Strict Attestation Rule:** The engineering team must **NOT** claim remote branch protection is active until the private remote repository has been created, protection rules have been configured in the provider console, and protection has been empirically verified via a rejected direct push test (`git push origin main` rejected).
+- **Prerequisite for Parallel Development:** Remote repository provisioning and branch protection verification must be completed before parallel team branching in Gate 1.

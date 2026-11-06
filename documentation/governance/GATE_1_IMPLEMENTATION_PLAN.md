@@ -1,2 +1,3 @@
 # SCRIPT SCRAPPER — GATE 1 IMPLEMENTATION PLAN (FOUNDATION SETUP)
 *(Full text mirrors root [`GATE_1_IMPLEMENTATION_PLAN.md`](file:///d:/script-scrapper/GATE_1_IMPLEMENTATION_PLAN.md))*.
+

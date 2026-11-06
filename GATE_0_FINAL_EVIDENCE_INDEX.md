@@ -24,9 +24,9 @@ Every architectural requirement, design decision, and operational specification 
 | **EVD-09** | Architecture | Vite + React 18+ SPA (No Node Container) | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 1, ADR-001 | Static build bundle served directly by Caddy; saves 250MB RAM. |
 | **EVD-10** | Architecture | FastAPI Async ASGI Backend Architecture | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 1, ADR-002 | High-throughput asynchronous routing with Pydantic v2 validation. |
 | **EVD-11** | Architecture | PostgreSQL 16 Relational Schema (14 Tables) | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` DDL spec | DDL fully written; circular FK eliminated via partial unique index. |
-| **EVD-12** | Architecture | Single DB Pooling Strategy (SQLAlchemy AsyncEngine)| **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 3, ADR-003 | Selected `postgresql+asyncpg://` with `AsyncAdaptedQueuePool` (pool_size=30). |
-| **EVD-13** | Architecture | Aggregate Connection Budget (100 Max Exact) | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 3 | $40\text{ (API Peak)} + 2 + 5 + 3 + 3 + 47 = 100\text{ connections}$. |
-| **EVD-14** | Architecture | PostgreSQL CTE FOR UPDATE SKIP LOCKED Queue | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 4, ADR-005 | Syntactically valid atomic CTE job-claiming idiom implemented. |
+| **EVD-12** | Architecture | Single DB Pooling Strategy (SQLAlchemy AsyncEngine)| **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 3, ADR-003 | Selected `postgresql+asyncpg://` with `AsyncAdaptedQueuePool` (2 Uvicorn workers $\times$ [pool=15, over=5]). |
+| **EVD-13** | Architecture | Aggregate Connection Budget (100 Max Exact) | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 3 | $40\text{ (API Tier)} + 2 + 5 + 3 + 3 + 47 = 100\text{ connections exact}$. |
+| **EVD-14** | Architecture | PostgreSQL CTE FOR UPDATE SKIP LOCKED Queue | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 4, ADR-005 | Syntactically valid atomic CTE query verified; live execution testing assigned to Gate 1. |
 | **EVD-15** | Architecture | Worker Transaction Boundaries (Zero Long DB Tx) | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 4 | 3-phase lifecycle: Claim (short tx) $\rightarrow$ OCR/AI (NO tx) $\rightarrow$ Persist (short tx). |
 | **EVD-16** | Architecture | Universal CIR Coordinate Contract (A4 & Letter) | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Part 6, ADR-007 | Normalized unrotated points + proportional margin classification ($\frac{x_0}{W}$). |
 | **EVD-17** | Architecture | Screenplay Test Fixture Specifications | **VERIFIED** | `FINAL_ARCHITECTURE_BASELINE_v1.3.md` Section 6.3 | 5 fixtures specified (Letter, A4, Rotated, Cropped, Scanned OCR). |
@@ -37,7 +37,7 @@ Every architectural requirement, design decision, and operational specification 
 | **EVD-22** | Governance | Branch Topology (`main` & `develop` tracked) | **VERIFIED** | Git repository branches | Inspected via `git branch -a` at commit `5dff8bf` & `bcc5c95`. |
 | **EVD-23** | Governance | Production `.gitignore` Specification | **VERIFIED** | `d:\script-scrapper\.gitignore` | Committed in repository root; covers Python, Vite, secrets, storage. |
 | **EVD-24** | Governance | Conventional Commits & Contribution Protocol | **VERIFIED** | `d:\script-scrapper\GIT_GOVERNANCE.md` | Approved and committed in repository root. |
-| **EVD-25** | Governance | Remote Server-Side Branch Protection Enforcement | **DOCUMENTED** | `GIT_GOVERNANCE.md` Section 1 | Requires remote GitHub repository creation during Gate 1. |
+| **EVD-25** | Governance | Remote Server-Side Branch Protection Enforcement | **DOCUMENTED** | `GIT_GOVERNANCE.md` Section 6 | Classified as `DOCUMENTED (PENDING REMOTE PROVISIONING)`; must be verified before parallel development. |
 | **EVD-26** | Runtime | Windows 64-bit Host OS | **VERIFIED** | Host system architecture | System confirmed as 64-bit Windows. |
 | **EVD-27** | Runtime | Python 3.13.5 (64-bit on PATH) | **VERIFIED** | Host environment | Output of `python --version` confirmed. |
 | **EVD-28** | Runtime | Git 2.47.1.windows.2 on PATH | **VERIFIED** | Host environment | Output of `git --version` confirmed. |
@@ -45,7 +45,7 @@ Every architectural requirement, design decision, and operational specification 
 | **EVD-30** | Runtime | Caddy v2.8+ Static Executable on PATH | **DOCUMENTED** | `WINDOWS_RUNTIME_VERIFICATION.md` | Queued for placement in Gate 1 Module 5. |
 | **EVD-31** | Runtime | Tesseract OCR v5.3+ Installed | **DOCUMENTED** | `WINDOWS_RUNTIME_VERIFICATION.md` | Queued for installation in Gate 1 Module 5. |
 | **EVD-32** | Operations | Coordinated DB & Storage Backup PowerShell Script | **VERIFIED** | `BACKUP_AND_RECOVERY_SPECIFICATION.md` | Syntactically validated script `scripts/backup.ps1` specified. |
-| **EVD-33** | Operations | Live Coordinated Backup/Restore Empirical Test | **NOT TESTED** | Gate 1 Acceptance Criteria AC-05 | Deferred to Gate 1 once PostgreSQL 16 instance is running. |
+| **EVD-33** | Operations | Live Coordinated Backup/Restore Empirical Test | **NOT TESTED** | Gate 1 Acceptance Criteria AC-06 | Deferred to Gate 1 (AC-06); strictly executed in isolated test environment (`script_scrapper_test_restore`). |
 | **EVD-34** | Performance | Locust 5, 10, 20 User Concurrent Load Test | **NOT TESTED** | Gate 1 Acceptance Criteria AC-06 | Deferred to Gate 7 production readiness validation. |
 
 ---
@@ -57,3 +57,4 @@ Every architectural requirement, design decision, and operational specification 
 - **NOT TESTED (2 Criteria):** Live backup restoration and multi-user load testing, strictly deferred to Gate 1 and Gate 7 in accordance with Gate 0 non-execution rules.
 - **ASSUMED (0 Criteria):** Zero unvalidated technical assumptions remain.
 - **BLOCKED (0 Criteria):** Zero unresolved architectural decisions or external blockers remain.
+

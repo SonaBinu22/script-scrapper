@@ -22,7 +22,7 @@
 | **07** | **Document Processing & OCR** | PyMuPDF spatial coordinates; Tesseract v5.3+ at 300 DPI; mixed-page pipeline. | Baseline v1.3 Part 1 | **PASSED** | Word bounding boxes normalized to standard 72 DPI space. |
 | **08** | **Screenplay CIR v1.3 Schema** | Hierarchical JSON schema, bounding boxes, dual dialogue grouping. | Baseline v1.3 Part 6 | **PASSED** | Binds dialogue to characters; models dual dialogue. |
 | **09** | **Database Schema & Relational Integrity** | 14 tables, circular FK resolved via partial unique index, `scene_elements`. | Baseline v1.3 Part 1 | **PASSED** | DDL specification complete; full script reconstruction. |
-| **10** | **PostgreSQL Connection Budgeting** | Strict allocation: 40 API, 2 Worker, 10 Admin, 48 Headroom/Burst buffer. | Baseline v1.3 Part 3 | **PASSED** | Prevents connection pool starvation on Windows host. |
+| **10** | **PostgreSQL Connection Budgeting** | Strict allocation: 40 API (2 Uvicorn workers $\times$ 20), 2 Worker, 5 Admin, 3 Watchdog, 3 Superuser, 47 Free buffer. | Baseline v1.3 Part 3 | **PASSED** | Prevents connection pool starvation on Windows host (100 exact). |
 | **11** | **PostgreSQL Queue & Worker Recovery**| `SKIP LOCKED` + `LISTEN / NOTIFY`, 5s heartbeats, 45s watchdog sweeper. | Baseline v1.3 Part 4 | **PASSED** | Eliminates Redis; 100% ACID persistence; zero CPU spin. |
 | **12** | **Coordinated Backup & Recovery** | Coordinated DB dump (`pg_dump -Fc`) + NTFS storage archive + manifest. | `BACKUP_AND_RECOVERY_SPECIFICATION.md` | **PASSED** | Automated PowerShell script and restore protocol verified. |
 | **13** | **Security & STRIDE Threat Model** | Comprehensive STRIDE evaluation; CSRF double-submit; 50MB zip bomb caps. | Phase 0.3 Report Deliverable 11 | **PASSED** | Zero-trust LAN posture; affirmative AI consent gating. |
@@ -39,7 +39,7 @@
 | **17** | **Git Repository Initialized** | Git initialized on `d:\script-scrapper` | Git repository active (`.git` exists) | **PASSED** | Verified via `git status`. |
 | **18** | **Branch Topology Created** | `main` (protected) and `develop` (integration) | Both branches created and tracked | **PASSED** | Verified via `git branch -a`. |
 | **19** | **Git Ignore Specification** | Covers Python, Node, Vite, storage, `.env` | `.gitignore` committed to repo | **PASSED** | Verified via `.gitignore` review. |
-| **20** | **Git Governance Rules** | Contribution rules, PR guidelines, Conventional Commits | `GIT_GOVERNANCE.md` committed | **PASSED** | Documented and established. |
+| **20** | **Git Governance & Remote Strategy** | Contribution rules, PR guidelines, remote branch protection procedures. | `GIT_GOVERNANCE.md` | **PASSED** | Established; remote protection documented pending private remote repo provisioning. |
 
 ---
 

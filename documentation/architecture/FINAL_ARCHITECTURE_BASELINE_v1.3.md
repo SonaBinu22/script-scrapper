@@ -120,20 +120,32 @@ To guarantee architectural consistency and prevent incompatible configuration co
 - **Connection Pool Class:** SQLAlchemy's native `AsyncAdaptedQueuePool`.
 - **Strict Parameter Standard:** Direct configuration parameters for `asyncpg.create_pool` (`min_size`, `max_size`, `command_timeout`) are strictly prohibited from mixing with SQLAlchemy pool parameters.
 
-### SQLAlchemy AsyncEngine Configuration Parameters
+### 3.2 Production Server & Uvicorn Worker Process Specification
+- **Selected Application Server:** Uvicorn under Python 3.13 on native Windows host.
+- **Exact Worker Process Count:** Exactly **2 Uvicorn worker processes** (`uvicorn app.main:app --workers 2 --host 127.0.0.1 --port 8000`).
+  - *Architectural Rationale:* On Windows, Uvicorn's multi-worker mode spawns independent child processes via Python's `multiprocessing` spawn model. Two worker processes provide process-level redundancy and dual-core concurrency while keeping host memory usage low (~80MB per worker process) and avoiding thread contention on Windows.
+- **Per-Process SQLAlchemy AsyncEngine Pool Configuration:**
+  - `pool_size = 15` (base connection pool per Uvicorn worker process)
+  - `max_overflow = 5` (maximum transient burst connections per Uvicorn worker process)
+  - `pool_timeout = 30.0` (seconds to wait before raising TimeoutError)
+  - `pool_recycle = 1800.0` (recycle connections older than 30 minutes)
+  - `pool_pre_ping = True` (emit test SELECT 1 to discard dead sockets)
+  - *Max connections per FastAPI worker process:* $15 + 5 = 20$ connections.
+
 ```python
+# Production SQLAlchemy AsyncEngine Configuration (Instantiated per worker process)
 engine = create_async_engine(
     DATABASE_URL,
-    pool_size=30,          # Base connection pool maintained by the engine
-    max_overflow=10,       # Maximum transient burst connections under heavy surge
-    pool_timeout=30.0,     # Seconds to wait before raising TimeoutError if pool is full
-    pool_recycle=1800.0,   # Recycle connections older than 30 minutes (prevents stale TCP)
-    pool_pre_ping=True,    # Emit test SELECT 1 to discard disconnected sockets
+    pool_size=15,          # 15 base connections per Uvicorn process (x2 processes = 30 base)
+    max_overflow=5,        # 5 overflow connections per process (x2 processes = 10 overflow)
+    pool_timeout=30.0,     # Timeout after 30 seconds if pool is exhausted
+    pool_recycle=1800.0,   # Recycle connections older than 30 minutes
+    pool_pre_ping=True,    # Liveness check before checkout
     echo=False
 )
 ```
 
-## 3.2 Aggregate Application Connection Budget (Max: 100)
+## 3.3 Aggregate Application Connection Budget (Max: 100)
 PostgreSQL 16 on Windows defaults to `max_connections = 100`. The aggregate application connection budget is strictly partitioned across processes to guarantee zero connection starvation:
 
 ```text
@@ -141,22 +153,30 @@ PostgreSQL 16 on Windows defaults to `max_connections = 100`. The aggregate appl
                         POSTGRESQL 16 CONNECTION BUDGET (MAX: 100)
 ====================================================================================================
 
-  1. FastAPI Backend (AsyncEngine Pool)      --> pool_size: 30, max_overflow: 10 (Peak API: 40)
-  2. Background Worker Pool (Dedicated Slots) --> Exactly 2 connections (1 per worker task)
-  3. Admin Operations & Migrations (Alembic)  --> Exactly 5 connections reserved
-  4. Monitoring, Healthchecks & Watchdog      --> Exactly 3 connections reserved
-  5. PostgreSQL Superuser Reserved Buffer     --> Exactly 3 connections (superuser_reserved_connections)
-  6. Unallocated Safety Margin / Free Buffer  --> Exactly 47 connections available
+  1. FastAPI Web API Tier (2 Uvicorn Worker Processes)
+     - Worker Process 1: pool_size=15, max_overflow=5  --> Max 20 connections
+     - Worker Process 2: pool_size=15, max_overflow=5  --> Max 20 connections
+     --> Subtotal FastAPI Web API Tier Peak             --> Max 40 connections
+  2. Background Worker Engine (Dedicated Process)
+     - 1 Worker process with 2 asyncio execution slots  --> Max 2 connections
+  3. Administrative Operations, CLI & Migrations
+     - Alembic migrations & maintenance scripts         --> Max 5 connections
+  4. Monitoring, Healthchecks & Watchdog Sweeper
+     - 1 Watchdog sweeper process (pool_size=2, over=1) --> Max 3 connections
+  5. PostgreSQL Superuser Reserved Buffer
+     - superuser_reserved_connections in postgresql.conf --> Max 3 connections
+  6. Unallocated Safety Margin / Headroom Buffer
+     - Free connection headroom for spikes & DBA tools   --> Exactly 47 connections
 ----------------------------------------------------------------------------------------------------
-  TOTAL MAXIMUM CONNECTIONS (max_connections) --> 100 CONNECTIONS EXACT (40 + 2 + 5 + 3 + 3 + 47)
+  TOTAL MAXIMUM CONNECTIONS (max_connections)          --> 100 CONNECTIONS EXACT (40 + 2 + 5 + 3 + 3 + 47)
 ====================================================================================================
 ```
 
 ### Connection Budgeting Rules
-1. **Per-Process Limit:** The primary FastAPI application process can consume a maximum of 40 connections under peak concurrent client load.
-2. **Worker Isolation:** The background worker engine operates in a separate process pool, using exactly 1 connection per active worker concurrency slot (default: 2 slots = 2 connections).
-3. **Superuser Protection:** PostgreSQL's parameter `superuser_reserved_connections = 3` reserves 3 slots exclusively for `postgres` superuser logins over localhost, ensuring an administrator can always inspect or terminate processes even during connection pool saturation.
-4. **Gate 1 Runtime Validation:** During Gate 1 foundation verification, connection limits and active states will be validated under simulated load via:
+1. **Per-Process Limit:** Each FastAPI worker process is strictly capped at 20 connections ($15 + 5$). Across the two Uvicorn worker processes, the peak API pool cannot exceed 40 connections.
+2. **Worker Isolation:** The background worker engine operates in a dedicated, separate process running an asyncio task queue with 2 concurrency slots, maintaining its own dedicated pool of exactly 2 connections (`pool_size = 2`, `max_overflow = 0`).
+3. **Superuser Protection:** PostgreSQL's parameter `superuser_reserved_connections = 3` reserves 3 slots exclusively for `postgres` superuser logins over localhost, ensuring an administrator can always inspect or terminate processes even during peak connection load.
+4. **Gate 1 Runtime Validation:** During Gate 1 foundation verification (AC-03), connection limits and active states will be empirically validated under simulated concurrent load via:
    ```sql
    SELECT count(*), state, application_name FROM pg_stat_activity GROUP BY state, application_name;
    ```
@@ -187,6 +207,11 @@ FROM next_job
 WHERE j.id = next_job.id
 RETURNING j.*;
 ```
+
+### Syntax Verification and Execution Testing Assignment
+- **PostgreSQL 16 Syntax Verification:** The CTE query above is syntactically valid in PostgreSQL 9.5+ through 16+. It executes an atomic `FOR UPDATE SKIP LOCKED` row-lock in `next_job` and immediately performs an `UPDATE ... FROM next_job` joining on the primary key, returning the updated tuple via `RETURNING j.*`.
+- **Transaction Boundary Enforcement:** The claiming transaction is strictly bounded (<50ms) and commits immediately. Zero database transactions are held open during PDF parsing, OCR image processing, or external AI API calls.
+- **Execution Testing Assignment:** In compliance with Gate 0 governance restrictions (no live execution or runtime dependencies in Gate 0), actual live database execution testing of this CTE query under concurrent worker load is explicitly assigned to **Gate 1 (Foundation Implementation — Module 2 & Module 3)**.
 
 ## 4.2 Strict Transaction Boundaries (Zero Long-Lived Transactions)
 **MANDATORY RULE:** Database transactions must **NEVER** be held open during lengthy document extraction, 300 DPI image rasterization, Tesseract OCR processing, or external AI API calls. Holding transactions open during multi-minute processing exhausts connections and locks table rows.
@@ -476,16 +501,50 @@ Every incoming API request verifies access on the backend across all 9 domain en
 
 # PART 9 — SECURITY, WINDOWS HOST HARDENING & NETWORK DEPLOYMENT
 
-## 9.1 Network Segmentation & Windows Firewall
-To prevent unintentional exposure when Caddy binds to `0.0.0.0`:
-1. **Internal Port Binding:**
-   - FastAPI Backend (`127.0.0.1:8000` strictly; never exposed to LAN).
-   - PostgreSQL 16 (`127.0.0.1:5432` strictly; never exposed to LAN).
-2. **Reverse Proxy Binding:** Only Caddy binds to `0.0.0.0:80` and `0.0.0.0:443`.
-3. **Windows Firewall Rule:** Inbound connections on ports 80 and 443 are strictly restricted to the local subnet scope (e.g. `192.168.0.0/16`, `10.0.0.0/8`), blocking any public internet access:
+## 9.1 Network Segmentation, Windows Firewall & Host Isolation
+
+### Host Port Isolation & Direct Client Inaccessibility
+To guarantee zero-trust local network posture, internal service ports are strictly isolated from client computers:
+1. **FastAPI Application Backend:** Binds strictly to loopback interfaces `127.0.0.1:8000` and `[::1]:8000`. It is never bound to `0.0.0.0` or external network adapters.
+2. **PostgreSQL 16 Database:** Configured in `postgresql.conf` with `listen_addresses = 'localhost'`. PostgreSQL only listens on `127.0.0.1:5432` and `[::1]:5432`.
+3. **Direct Client Blocking:** Direct access to port 8000 and port 5432 from LAN clients is impossible:
+   - Sockets are not bound to any LAN IP address.
+   - Windows Firewall default inbound policy silently drops unsolicited traffic on unapproved ports.
+   - All client communication must terminate at the Caddy reverse proxy over HTTPS on port 443.
+
+### Reverse Proxy Binding & Configurable LAN Subnet Restriction
+Only Caddy binds to external network interfaces (`0.0.0.0:443` and `0.0.0.0:80` for HTTP-to-HTTPS redirect). Inbound connections are strictly restricted to the host's actual local subnet rather than overly broad network blocks:
+
+```powershell
+# PowerShell Host Firewall Setup (scripts/configure_firewall.ps1)
+# Resolves configurable actual LAN subnet or reads from environment variable
+$LanSubnet = if ($env:LAN_SUBNET) {
+    $env:LAN_SUBNET
+} else {
+    # Dynamically discover active local IPv4 subnet (e.g. 192.168.1.0/24)
+    $activeIp = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias "Ethernet*","Wi-Fi*" | 
+        Where-Object { $_.IPAddress -notmatch "^127\." -and $_.IPAddress -notmatch "^169\.254\." } | 
+        Select-Object -First 1)
+    "$($activeIp.IPAddress.Substring(0, $activeIp.IPAddress.LastIndexOf('.'))).0/24"
+}
+
+# Apply restrictive firewall rules for HTTPS and HTTP redirect
+New-NetFirewallRule -DisplayName "ScriptScrapper-LAN-HTTPS" `
+    -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow -RemoteAddress $LanSubnet
+
+New-NetFirewallRule -DisplayName "ScriptScrapper-LAN-HTTP-Redirect" `
+    -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow -RemoteAddress $LanSubnet
+```
+
+### IPv6 Considerations & Perimeter Hardening
+1. **Public IPv6 Ingress Prohibition:** Inbound public/global IPv6 traffic (`2000::/3`) is strictly prohibited. The host does not expose ports 80, 443, 8000, or 5432 to the public internet via IPv6.
+2. **Local IPv6 LAN Scoping:** If IPv6 is active within the local private network, inbound firewall rules for port 443 must be strictly scoped to Link-Local (`fe80::/10`) and Unique Local Address (ULA `fc00::/7`) prefixes:
    ```powershell
-   New-NetFirewallRule -DisplayName "ScriptScrapper-LAN-HTTPS" -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow -RemoteAddress 192.168.0.0/16,10.0.0.0/8
+   New-NetFirewallRule -DisplayName "ScriptScrapper-LAN-HTTPS-IPv6" `
+       -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow -RemoteAddress "fe80::/10","fc00::/7"
    ```
+3. **Loopback Only for Internal Daemons:** FastAPI and PostgreSQL bind to loopback `::1` only.
+4. **Outbound IPv6:** Outbound connections (e.g. external AI API calls to OpenAI, Anthropic, or Gemini) remain unrestricted.
 
 ## 9.2 Authentication & Secret Management
 - **Passwords:** Argon2id with memory cost 64MB, time cost 3, parallelism 4.

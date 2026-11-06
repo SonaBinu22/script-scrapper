@@ -66,7 +66,8 @@ The sole objective of **Gate 1 (Foundation Implementation)** is to establish a v
   5. Implement healthcheck endpoints:
      - `GET /api/v1/health` — Returns 200 OK and uptime.
      - `GET /api/v1/system/status` — Tests active database connectivity via `SELECT 1` and reports pool statistics.
-  6. Run backend locally via Uvicorn: `uvicorn app.main:app --host 127.0.0.1 --port 8000`.
+  6. Run backend locally via Uvicorn with 2 workers: `uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2`.
+  7. Validate aggregate database connection pooling limits (2 Uvicorn workers $\times$ 20 connection max = 40 peak API) and test CTE job-claiming SQL on live database.
 
 ### Module 4: Frontend Foundation
 - **Goal:** Initialize Vite + React SPA, configure Tailwind CSS, shadcn/ui foundation, and API client.
@@ -93,8 +94,8 @@ The sole objective of **Gate 1 (Foundation Implementation)** is to establish a v
      ```powershell
      icacls "$env:LOCALAPPDATA\Caddy\certificates\local\root.key" /inheritance:r /grant:r "SYSTEM":(F) "Administrators":(F)
      ```
-  5. Create Windows Firewall rule restricting ports 80/443 to the local LAN subnet (`192.168.0.0/16`, `10.0.0.0/8`).
-  6. Execute empirical backup and restoration test (`scripts/backup.ps1` and `scripts/restore.ps1`) against the newly initialized Gate 1 database.
+  5. Create Windows Firewall rules restricting ports 80/443 strictly to the configurable actual local LAN subnet (`$env:LAN_SUBNET`) and constrain IPv6 to Link-Local / ULA scopes (`fe80::/10`, `fc00::/7`).
+  6. Execute empirical backup and restoration test against an isolated test environment (`script_scrapper_test_restore` database and isolated temp directory `storage/test_restore`), leaving production and development databases completely untouched.
 
 ---
 
@@ -110,3 +111,4 @@ flowchart TD
     M5 --> Test["Gate 1 Acceptance Verification Suite"]
     Test --> Gate1Approval["Gate 1 Sign-Off $\rightarrow$ Gate 2 Authorization"]
 ```
+
