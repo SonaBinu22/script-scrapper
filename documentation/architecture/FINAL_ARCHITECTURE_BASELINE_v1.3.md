@@ -120,9 +120,10 @@ PostgreSQL on Windows defaults to `max_connections = 100`. The connection budget
                         POSTGRESQL 16 CONNECTION BUDGET (MAX: 100)
 ====================================================================================================
 
-  [ FastAPI Backend AsyncPG Pool ]           --> Min: 10, Max: 40, Overflow: 10
+  [ FastAPI Backend AsyncPG Base Pool ]      --> Min: 10, Max: 40 connections
+  [ FastAPI Backend AsyncPG Overflow Pool ]  --> Max: 10 dynamic burst connections (Peak API: 50)
   [ Background Worker Tasks Pool ]           --> Exactly 2 connections (1 per worker concurrency slot)
-  [ Maintenance, Migrations & Admin Pool ]   --> Exactly 10 connections reserved
+  [ Maintenance, Migrations & Admin Pool ]   --> Exactly 10 connections reserved (Alembic / CLI)
   [ PostgreSQL Internal Superuser Buffer ]  --> Exactly 3 connections (superuser_reserved_connections)
   [ Free Burst & Healthcheck Headroom ]      --> Exactly 35 connections available
 ----------------------------------------------------------------------------------------------------
@@ -131,32 +132,36 @@ PostgreSQL on Windows defaults to `max_connections = 100`. The connection budget
 ```
 
 ### Connection Pool Configuration Rules
-1. **FastAPI Backend:** Configured via `asyncpg.create_pool()` with `min_size = 10`, `max_size = 40`, `max_inactive_connection_lifetime = 300.0`, `command_timeout = 30.0`.
-2. **Worker Pool:** Persistent dedicated connections using `LISTEN new_job_channel`.
-3. **Connection Leak Prevention:** All database sessions managed using `async with async_session_factory() as session:` context managers.
+1. **Arithmetic Verification:** $50\text{ (API Peak)} + 2\text{ (Worker)} + 10\text{ (Admin)} + 3\text{ (Superuser)} + 35\text{ (Free Buffer)} = \mathbf{100\text{ connections}}$.
+2. **FastAPI Backend:** Configured via `asyncpg.create_pool()` with `min_size = 10`, `max_size = 40`, `max_inactive_connection_lifetime = 300.0`, `command_timeout = 30.0`. Under heavy burst, `max_overflow = 10` accommodates transient surges.
+3. **Worker Pool:** Persistent dedicated connections using `LISTEN new_job_channel`.
+4. **Connection Leak Prevention:** All database sessions managed using `async with async_session_factory() as session:` context managers.
 
 ---
 
 # PART 4 — POSTGRESQL WORKER RECOVERY, IDEMPOTENCY & SCHEDULING
 
-## 4.1 Queue Dequeue Engine
-Workers claim jobs atomically without row contention using PostgreSQL `FOR UPDATE SKIP LOCKED`:
+## 4.1 Syntactically Valid Queue Dequeue Engine (CTE Idiom)
+Workers claim jobs atomically without row contention using PostgreSQL `FOR UPDATE SKIP LOCKED` inside a Common Table Expression (CTE):
 
 ```sql
-UPDATE processing_jobs
-SET status = 'PROCESSING',
-    started_at = NOW(),
-    heartbeat_at = NOW(),
-    worker_id = :worker_id,
-    attempt_count = attempt_count + 1
-WHERE id = (
-    SELECT id FROM processing_jobs
+WITH next_job AS (
+    SELECT id
+    FROM processing_jobs
     WHERE status = 'QUEUED'
     ORDER BY created_at ASC
     FOR UPDATE SKIP LOCKED
     LIMIT 1
 )
-RETURNING *;
+UPDATE processing_jobs j
+SET status = 'PROCESSING',
+    started_at = NOW(),
+    heartbeat_at = NOW(),
+    worker_id = :worker_id,
+    attempt_count = j.attempt_count + 1
+FROM next_job
+WHERE j.id = next_job.id
+RETURNING j.*;
 ```
 
 ## 4.2 CPU Spin Prevention (LISTEN / NOTIFY)
@@ -308,7 +313,19 @@ The Common Intermediate Representation (CIR v1.3) strictly enforces hierarchical
 2. **Element Ordering:** Within each scene, `elements.sequence_index` must be strictly monotonic ($1, 2, 3, \dots, M$).
 3. **Dialogue Binding:** Any element of type `dialogue` or `parenthetical` must be preceded by an element of type `character` or `parenthetical`.
 4. **Dual Dialogue Consistency:** If `dual_dialogue_group_id` is populated, exactly two distinct character cues within the same scene must share that group ID.
-5. **Bounding Box Geometric Constraints:** Bounding box coordinates must satisfy $0 \le x_0 < x_1 \le 612$ and $0 \le y_0 < y_1 \le 792$ (standard 72 DPI US Letter page coordinates).
+5. **Universal Page Geometry & Bounding Box Constraints:**
+   - Coordinates are normalized to standard unrotated top-left origin points ($1/72\text{ inch}$) relative to the visible page `CropBox` (or `MediaBox` if CropBox is absent).
+   - If a page has rotation (`/Rotate` = 90, 180, 270 degrees), coordinates are transformed to unrotated orientation prior to persistence.
+   - Bounding boxes must satisfy $0 \le x_0 < x_1 \le W_{\text{page}}$ and $0 \le y_0 < y_1 \le H_{\text{page}}$, where:
+     - US Letter: $W = 612\text{ pt}, H = 792\text{ pt}$ ($8.5 \times 11\text{ in}$)
+     - International A4: $W = 595.28\text{ pt}, H = 841.89\text{ pt}$ ($210 \times 297\text{ mm}$)
+   - **Proportional Typographical Margins:** Typographical margin classification evaluates relative horizontal position $x_0 / W_{\text{page}}$ rather than fixed points, ensuring identical parsing accuracy across both US Letter and A4 screenplays:
+     - Scene Heading / Slugline: $x_0 \approx 17.6\% \pm 3.0\%$
+     - Action Line: $x_0 \approx 17.6\% \pm 3.0\%$ (line width $\ge 60\%$)
+     - Character Cue: $x_0 \approx 43.5\% \pm 4.0\%$
+     - Parenthetical: $x_0 \approx 36.5\% \pm 3.5\%$
+     - Dialogue: $x_0 \approx 29.4\% \pm 3.5\%$ (line width $\le 45\%$)
+     - Transition: $x_0 \ge 64.0\%$ (right-aligned)
 
 ---
 
