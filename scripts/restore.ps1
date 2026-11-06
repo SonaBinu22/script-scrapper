@@ -39,6 +39,7 @@ if (-not (Test-Path $BackupDir)) {
     Write-Error "Backup directory does not exist: $BackupDir"
     exit 1
 }
+$BackupDir = (Get-Item $BackupDir).FullName
 
 $dbDumpFile = Join-Path $BackupDir "database.dump"
 $storageBackupDir = Join-Path $BackupDir "storage"
