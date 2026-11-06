@@ -40,40 +40,40 @@
 - **Decision:** Adopt Python 3.11+ with FastAPI, Pydantic v2, and Uvicorn.
 - **Consequences:** Native OpenAPI documentation generation, strict validation, high asynchronous request throughput.
 
-### ADR-003: PostgreSQL 16 Relational Database Engine
-- **Context:** Multi-user concurrent access on LAN causes SQLite write lock contention (`SQLITE_BUSY`).
-- **Decision:** Adopt PostgreSQL 16 with JSONB support.
-- **Consequences:** MVCC row-level locking supports concurrent users and workers; indexed JSONB enables rich analysis queries.
+### ADR-003: PostgreSQL 16 & SQLAlchemy AsyncEngine with asyncpg Driver
+- **Context:** Multi-user concurrent access on LAN causes SQLite write lock contention (`SQLITE_BUSY`). Incompatible connection pool parameters between raw `asyncpg` and SQLAlchemy caused arithmetic and configuration ambiguities.
+- **Decision:** Adopt PostgreSQL 16 managed strictly through SQLAlchemy 2.0 `AsyncEngine` with `asyncpg` driver (`postgresql+asyncpg://...`) using `AsyncAdaptedQueuePool` (`pool_size=30`, `max_overflow=10`, peak API = 40 connections; aggregate max 100).
+- **Consequences:** MVCC row-level locking supports concurrent users and workers; indexed JSONB enables rich analysis queries. Unified pooling strategy eliminates driver parameter collisions.
 
 ### ADR-004: Modular Monolith Software Architecture
 - **Context:** Avoiding premature microservices complexity while maintaining clean module boundaries.
 - **Decision:** Implement a modular monolith with discrete domains (`auth`, `projects`, `scripts`, `processing`, `ai`).
 - **Consequences:** Single deployable unit, straightforward transactions, zero distributed network latency.
 
-### ADR-005: PostgreSQL SKIP LOCKED Background Task Queue
-- **Context:** Redis Queue (RQ) relies strictly on POSIX `os.fork()`, which fatally crashes on native Windows environments.
-- **Decision:** Implement background worker queue using PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED` combined with `LISTEN / NOTIFY`.
-- **Consequences:** 100% native Windows compatibility. Eliminates Redis service dependency. 100% ACID persistence.
+### ADR-005: PostgreSQL SKIP LOCKED Queue & Strict Transaction Boundaries
+- **Context:** Redis Queue (RQ) relies strictly on POSIX `os.fork()`, which fatally crashes on native Windows environments. Holding database transactions open during multi-minute OCR or AI operations causes connection exhaustion and lock contention.
+- **Decision:** Implement background worker queue using PostgreSQL CTE `FOR UPDATE SKIP LOCKED` combined with `LISTEN / NOTIFY`. Strictly enforce zero open database transactions during document extraction, OCR, or AI API execution.
+- **Consequences:** 100% native Windows compatibility. Eliminates Redis service dependency. 100% ACID persistence without transaction bloat.
 
 ### ADR-006: Tesseract OCR (v5.3+) Engine Integration
 - **Context:** Confirmed requirement mandates processing scanned and image-based PDF screenplays.
 - **Decision:** Integrate Tesseract OCR (v5.3+) via PyMuPDF 300 DPI rasterization and `pytesseract`.
 - **Consequences:** Permissive Apache 2.0 license. Word-level bounding box coordinates preserve typographical margins. Memory usage <150MB.
 
-### ADR-007: PyMuPDF Bounding-Box Coordinate Extraction
-- **Context:** Plain-text PDF extraction strips visual indentation margins, crippling character and dialogue parsing accuracy.
-- **Decision:** Mandate PyMuPDF coordinate extraction (`page.get_text("blocks")` / `"words"`).
-- **Consequences:** Captures $(x_0, y_0, x_1, y_1)$ bounding coordinates for typographical classification of sluglines, characters, and dialogue.
+### ADR-007: Universal Screenplay CIR Coordinate Contract & Proportional Margins
+- **Context:** Plain-text PDF extraction strips visual indentation margins. PDFs also vary across US Letter ($612 \times 792\text{ pt}$) and International A4 ($595 \times 842\text{ pt}$), rotations, and non-zero CropBoxes.
+- **Decision:** Mandate PyMuPDF coordinate extraction relative to unrotated CropBox origins in standard points ($1/72\text{ in}$). Classify screenplay elements using relative horizontal percentages ($x_0 / W_{\text{page}}$).
+- **Consequences:** Captures $(x_0, y_0, x_1, y_1)$ bounding coordinates. Provides identical classification accuracy across both US Letter and International A4 screenplay layouts.
 
 ### ADR-008: Unified Scene Elements Relational Table
 - **Context:** Baseline v1.0 only stored scenes and dialogue, omitting Action descriptions, Parentheticals, and Transitions.
 - **Decision:** Introduce a unified `scene_elements` table linked to `scenes` with strict `sequence_index`.
 - **Consequences:** Screenplays can be reconstructed and rendered with 100% textual fidelity in the reader UI.
 
-### ADR-009: Caddy v2 Reverse Proxy with Automated Local CA
-- **Context:** Multi-computer LAN access requires HTTPS to protect authentication cookies, but self-signed certificates cause browser security warnings.
-- **Decision:** Adopt Caddy v2 with its embedded internal Certificate Authority (`local_certs`).
-- **Consequences:** Single executable (`caddy.exe`). Exposes root CA certificate at `/system/ca.crt` for one-click client trust installation.
+### ADR-009: Caddy v2 Reverse Proxy with Persistent Internal CA & Out-of-Band Trust
+- **Context:** Multi-computer LAN access requires HTTPS to protect authentication cookies. Self-signed certificates cause browser security warnings, and deleting CA storage disrupts all connected client machines.
+- **Decision:** Adopt Caddy v2 with its embedded internal Certificate Authority (`local_certs`). Protect the CA private key with strict NTFS ACLs. Distribute the root certificate via `/system/ca.crt` accompanied by an out-of-band SHA-256 fingerprint verification policy. Strictly prohibit deleting CA storage as a routine recovery step.
+- **Consequences:** Single executable (`caddy.exe`). Exposes root CA certificate with cryptographically verified trust. Prevents MITM attacks across the LAN.
 
 ### ADR-010: Partial Unique Index for Active Script Version
 - **Context:** Circular foreign key between `scripts.current_version_id` and `script_versions.script_id` caused insertion deadlocks.
