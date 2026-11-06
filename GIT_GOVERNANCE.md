@@ -134,6 +134,18 @@ To establish server-side branch protection for `main` and `develop`, the System 
 3. **Option C (Public Repository):** If proprietary IP confidentiality requirements permit (the codebase maintains zero credentials and synthetic test screenplays only), converting the repository to Public instantly unlocks full branch protection rules on GitHub Free.
 4. **Option D (Interim Local Pre-Push Hook Enforcement):** While awaiting account upgrade authorization, enforce branch protection across all engineering team clones via local Git hooks (`.githooks/pre-push`), blocking direct pushes to `main` and `develop`.
 
+### 6.4 Local Hook Activation & Inherent Bypass Limitations
+- **Local Hook Activation:** The repository provides [`.githooks/pre-push`](file:///d:/script-scrapper/.githooks/pre-push), formally activated on the host workspace via:
+  ```powershell
+  git config core.hooksPath .githooks
+  ```
+- **Empirical Verification Evidence:**
+  - Direct push to `main` (`git push --dry-run origin HEAD:main`) $\longrightarrow$ Intercepted and terminated with exit code 1 (`[GOVERNANCE ERROR] Direct push to protected branch 'main' is strictly prohibited`).
+  - Direct push to `develop` (`git push --dry-run origin test-branch:develop`) $\longrightarrow$ Intercepted and terminated with exit code 1 (`[GOVERNANCE ERROR] Direct push to protected branch 'develop' is strictly prohibited`).
+- **Critical Governance Limitation Notice:**
+  > [!WARNING]
+  > Local client-side Git hooks execute exclusively within the developer's local environment. They can be bypassed by appending `--no-verify` (`git push --no-verify`) or by modifying local git configuration. **Local hooks do not replace server-side GitHub branch protection.** True enforcement requires server-side protection rules enabled via GitHub Pro or GitHub Organization Team tiers.
+
 ---
 
 ## 7. TEAM DEVELOPMENT & FEATURE BRANCH TOPOLOGY
