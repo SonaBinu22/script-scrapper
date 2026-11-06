@@ -106,9 +106,11 @@ id_rsa
 id_ecdsa
 id_ed25519
 
-# Caddy Local Certificates Cache
+# Caddy Local Certificates & Runtime Data
 .caddy/
+caddy_data/
 certificates/
+backups/
 
 # ==============================================================================
 # Operating System & IDE Files
